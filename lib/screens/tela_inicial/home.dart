@@ -1,5 +1,7 @@
 // ignore_for_file: unnecessary_this
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/container.dart';
 import 'package:flutter/src/widgets/framework.dart';
@@ -7,6 +9,7 @@ import 'package:itafestafornecedor/screens/tela_pedidos/pedidos.dart';
 import '../tela_edit_produto/editProduto.dart';
 import '../tela_add_produto/addProduto.dart';
 
+import 'package:http/http.dart' as http;
 
 abstract class IFornecedor {
   int get id;
@@ -17,161 +20,263 @@ abstract class IFornecedor {
   String get telefone;
 }
 
-class HomePage extends StatelessWidget {
+class Produto {
+  final int id;
+  final String nome;
+  final String descricao;
+  final String valor;
+  final String disponivel;
+  final int fornecedorId;
 
- final List <Map<String, dynamic>>fornecedores = [
-    {
-      'id': 1,
-      'tipo': 'bolos',
-      'nome': 'João Bolos',
-      'descricao': 'Os melhores bolos doces de Itajubá',
-      'endereco': 'Rua dos Bolos, 123',
-      'telefone': '123456789'
-    },
-    {
-      'id': 2,
-      'tipo': 'salgados',
-      'nome': 'Maria Salgados',
-      'descricao': 'Os melhores salgados de Itajubá',
-      'endereco': 'Rua dos Salgados, 123',
-      'telefone': '123456789'
-    },
-    {
-      'id': 3,
-      'tipo': 'doces',
-      'nome': 'José Doces',
-      'descricao': 'Os melhores doces de Itajubá',
-      'endereco': 'Rua dos Doces, 123',
-      'telefone': '123456789'
-    },
-    {
-      'id': 4,
-      'tipo': 'bebidas',
-      'nome': 'Joana Bebidas',
-      'descricao': 'As melhores bebidas de Itajubá',
-      'endereco': 'Rua das Bebidas, 123',
-      'telefone': '123456789'
-    },
-    // Adicione outros fornecedores aqui
-  ];
+  Produto({
+    required this.id,
+    required this.nome,
+    required this.descricao,
+    required this.valor,
+    required this.disponivel,
+    required this.fornecedorId,
+  });
 
+  factory Produto.fromJson(Map<String, dynamic> json) {
+    return Produto(
+      id: json['id'],
+      nome: json['nome'],
+      descricao: json['descricao'],
+      valor: json['valor'],
+      disponivel: json['disponivel'],
+      fornecedorId: json['fornecedorId'],
+    );
+  }
+}
+
+class Fornecedor {
+  final int id;
+  final String tipo;
+  final String nome;
+  final String descricao;
+  final String endereco;
+  final String telefone;
+
+  Fornecedor({
+    required this.id,
+    required this.tipo,
+    required this.nome,
+    required this.descricao,
+    required this.endereco,
+    required this.telefone,
+  });
+
+  factory Fornecedor.fromJson(Map<String, dynamic> json) {
+    return Fornecedor(
+      id: json['id'],
+      tipo: json['tipo'],
+      nome: json['nome'],
+      descricao: json['descricao'],
+      endereco: json['endereco'],
+      telefone: json['telefone'],
+    );
+  }
+}
+
+Future<List<Produto>> fetchProdutos() async {
+  final response = await http.get(Uri.parse(
+      'https://redes-8ac53ee07f0c.herokuapp.com/api/v1/produtos?fornecedor_id[eq]=1'));
+
+  if (response.statusCode == 200) {
+    List<Produto> produtos = [];
+
+    var json = jsonDecode(response.body) as Map<String, dynamic>;
+
+    var data = json['data'] as List<dynamic>;
+
+    for (var produto in data) {
+      produtos.add(Produto.fromJson(produto));
+    }
+    return produtos;
+  } else {
+    throw Exception('Falha ao carregar produtos');
+  }
+}
+
+Future<List<Fornecedor>> fetchDadosFornecedor() async {
+  final response = await http.get(Uri.parse(
+      'https://redes-8ac53ee07f0c.herokuapp.com/api/v1/fornecedores?email[eq]=zé@gmail.com'));
+
+  if (response.statusCode == 200) {
+    List<Fornecedor> fornecedores = [];
+
+    var json = jsonDecode(response.body) as Map<String, dynamic>;
+
+    var data = json['data'] as List<dynamic>;
+
+    for (var fornecedor in data) {
+      fornecedores.add(Fornecedor.fromJson(fornecedor));
+    }
+    return fornecedores;
+  } else {
+    throw Exception('Falha ao carregar produtos');
+  }
+}
+
+class HomePage extends StatefulWidget {
+  const HomePage({Key? key}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late Future<List<Produto>> futureProdutos;
+  late Future<List<Fornecedor>> futureDadosFornecedor;
+
+  @override
+  void initState() {
+    super.initState();
+    futureProdutos = fetchProdutos();
+    futureDadosFornecedor = fetchDadosFornecedor();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          centerTitle: true,
-          title: Text('Inicio', textAlign: TextAlign.center),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () {
-                 Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => AddProductScreen()),
-                    );
-              },
-            ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: CircleAvatar(
-                      backgroundColor: Colors.blue,
-                      radius: 30,
-                      // Substitua o ícone com o ícone desejado para a loja
-                      child: Icon(Icons.store, size: 30, color: Colors.white),
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Inicio', textAlign: TextAlign.center),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddProductScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          FutureBuilder(
+              future: futureDadosFornecedor,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  var fornecedor = snapshot.data as List<Fornecedor>;
+                  return Row(
                     children: [
-                      Text(
-                        'Nome da Loja',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: CircleAvatar(
+                          backgroundColor: Colors.blue,
+                          radius: 30,
+                          // Substitua o ícone com o ícone desejado para a loja
+                          child:
+                              Icon(Icons.store, size: 30, color: Colors.white),
                         ),
                       ),
-                      Text(
-                        'Descrição da loja de exemplo',
-                      ),
-                      Text(
-                        'Endereço: Rua Exemplo, 123',
-                        style: TextStyle(
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      Text(
-                        'Telefone: (00) 1234-5678',
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            fornecedor[0].nome,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                          Text(
+                            fornecedor[0].descricao,
+                          ),
+                          Text(
+                            fornecedor[0].endereco,
+                            style: const TextStyle(
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          Text(
+                            fornecedor[0].telefone,
+                          ),
+                        ],
                       ),
                     ],
+                  );
+                } else if (snapshot.hasError) {
+                  return Text('${snapshot.error}');
+                }
+
+                return const SizedBox(
+                  height: 85.0,
+                  width: 200.0,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8.0),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      left: BorderSide(width: 2.0, color: Colors.black),
+                    ),
                   ),
-                ],
-              ),
-              SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      margin: EdgeInsets.only(right: 8.0),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          left: BorderSide(width: 2.0, color: Colors.black),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.only(left: 8.0),
-                        child: Text(
-                          'Produtos',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 8.0),
+                    child: Text(
+                      'Produtos',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-              SizedBox(height: 10),
-              CardWithProduct(
-                productName: 'Produto A',
-                productDescription: 'Descrição do Produto A',
-                productPrice: 'R\$ 25,00',
-              ),
-              CardWithProduct(
-                productName: 'Produto B',
-                productDescription: 'Descrição do Produto B',
-                productPrice: 'R\$ 35,00',
-              ),
-              CardWithProduct(
-                productName: 'Produto C',
-                productDescription: 'Descrição do Produto C',
-                productPrice: 'R\$ 15,00',
-              ),
-               const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => OrderScreen()),
-                    );
-              },
-              child: const Text('Ver pedidos'),
-            ),
             ],
           ),
-        ),
-      );
-      
+          const SizedBox(height: 10),
+          SizedBox(
+            height: MediaQuery.of(context).size.height - 370,
+            child: FutureBuilder(
+                future: futureProdutos,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    var produtos = snapshot.data as List<Produto>;
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: produtos.length,
+                      itemBuilder: (context, index) {
+                        return CardWithProduct(
+                          productName: produtos[index].nome,
+                          productDescription: produtos[index].descricao,
+                          productPrice: produtos[index].valor,
+                        );
+                      },
+                    );
+                  } else if (snapshot.hasError) {
+                    return Text('${snapshot.error}');
+                  }
+
+                  return const SizedBox(
+                      height: 85.0, width: 200.0, child: null);
+                }),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => OrderScreen()),
+              );
+            },
+            child: const Text('Ver pedidos'),
+          ),
+        ]),
+      ),
+    );
   }
 }
 
@@ -190,27 +295,28 @@ class CardWithProduct extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(8.0),
         child: Row(
           children: [
             Container(
               width: 80,
               height: 80,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.grey,
               ),
               // Substitua o ícone com o ícone desejado para o produto
-              child: Icon(Icons.shopping_bag, size: 40, color: Colors.white),
+              child:
+                  const Icon(Icons.shopping_bag, size: 40, color: Colors.white),
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     productName,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -220,7 +326,7 @@ class CardWithProduct extends StatelessWidget {
                   ),
                   Text(
                     productPrice,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
                     ),
@@ -232,23 +338,23 @@ class CardWithProduct extends StatelessWidget {
               onTap: () {
                 print("Excluir");
               },
-              child: Icon(Icons.delete, color: Colors.red),
+              child: const Icon(Icons.delete, color: Colors.red),
             ),
             GestureDetector(
               onTap: () {
                 Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => EditProductScreen( 
-                        productDescription: this.productName,
-                        productName: this.productDescription,
-                        productValue: 25,
-                        supplierId: 1,
-                      )),
-                    );
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => EditProductScreen(
+                            productDescription: this.productName,
+                            productName: this.productDescription,
+                            productValue: 25,
+                            supplierId: 1,
+                          )),
+                );
               },
-              child: Icon(Icons.edit),
+              child: const Icon(Icons.edit),
             ),
-           
           ],
         ),
       ),
