@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 
 class OrderScreen extends StatelessWidget {
+  const OrderScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: Text('Pedidos', textAlign: TextAlign.center),
+          title: const Text('Pedidos', textAlign: TextAlign.center),
           leading: IconButton(
-            icon: Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () {
               Navigator.of(context).pop(); // Retorna para a tela anterior
             },
           ),
         ),
         body: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: ListView.builder(
             itemCount: 5, // Substitua pelo número de pedidos
             itemBuilder: (context, index) {
@@ -29,8 +31,10 @@ class OrderScreen extends StatelessWidget {
 }
 
 class OrderCard extends StatefulWidget {
+  const OrderCard({super.key});
+
   @override
-  _OrderCardState createState() => _OrderCardState();
+  State<OrderCard> createState() => _OrderCardState();
 }
 
 class _OrderCardState extends State<OrderCard> {
@@ -45,11 +49,11 @@ class _OrderCardState extends State<OrderCard> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 8.0),
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: ListTile(
-        leading: Icon(Icons.shopping_bag), // Ícone referente ao produto
-        title: Text('Nome do Produto'),
-        subtitle: Column(
+        leading: const Icon(Icons.shopping_bag), // Ícone referente ao produto
+        title: const Text('Nome do Produto'),
+        subtitle: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Nome do Cliente'),
@@ -58,7 +62,9 @@ class _OrderCardState extends State<OrderCard> {
           ],
         ),
         trailing: IconButton(
-          icon: isConfirmed ? Icon(Icons.done) : Icon(Icons.delivery_dining),
+          icon: isConfirmed
+              ? const Icon(Icons.done)
+              : const Icon(Icons.delivery_dining),
           onPressed: () {
             toggleConfirmation();
           },

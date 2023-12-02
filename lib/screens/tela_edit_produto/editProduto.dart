@@ -1,16 +1,24 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:itafestafornecedor/screens/tela_inicial/home.dart';
+import 'package:http/http.dart' as http;
+import 'package:itafestafornecedor/screens/tela_login/login.dart';
 
 class EditProductScreen extends StatelessWidget {
+  final int id;
   final String productName;
   final String productDescription;
   final double productValue;
-  final int supplierId;
+  final Fornecedor fornecedor;
 
   const EditProductScreen({
+    super.key,
+    required this.id,
     required this.productName,
     required this.productDescription,
     required this.productValue,
-    required this.supplierId,
+    required this.fornecedor,
   });
 
   @override
@@ -18,21 +26,22 @@ class EditProductScreen extends StatelessWidget {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: Text('Editar', textAlign: TextAlign.center),
+          title: const Text('Editar', textAlign: TextAlign.center),
           leading: IconButton(
-            icon: Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () {
               Navigator.of(context).pop(); // Retorna para a tela anterior
             },
           ),
         ),
         body: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: EditProductForm(
             initialProductName: productName,
             initialProductDescription: productDescription,
             initialProductValue: productValue.toString(),
-            initialSupplierId: supplierId.toString(),
+            productId: id,
+            fornecedor: fornecedor,
           ),
         ),
       ),
@@ -40,28 +49,90 @@ class EditProductScreen extends StatelessWidget {
   }
 }
 
+Future<void> editProduct(
+    BuildContext context, Produto produto, Fornecedor fornecedor) async {
+  var response = await http.put(
+    Uri.parse(
+        'https://redes-8ac53ee07f0c.herokuapp.com/api/v1/produtos/${produto.id}'),
+    headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+    body: jsonEncode(<String, dynamic>{
+      'nome': produto.nome,
+      'descricao': produto.descricao,
+      'valor': produto.valor,
+      'disponivel': true,
+      'fornecedor_id': 1,
+    }),
+  );
+
+  if (response.statusCode == 200) {
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Produto editado com sucesso!'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Fecha o alerta
+              // volta para home
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => HomePage(fornecedor: fornecedor),
+                ),
+              );
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  } else {
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Erro ao editar produto!'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Fecha o alerta
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class EditProductForm extends StatefulWidget {
+  final int productId;
   final String initialProductName;
   final String initialProductDescription;
   final String initialProductValue;
-  final String initialSupplierId;
+  final Fornecedor fornecedor;
 
   const EditProductForm({
+    super.key,
+    required this.productId,
     required this.initialProductName,
     required this.initialProductDescription,
     required this.initialProductValue,
-    required this.initialSupplierId,
+    required this.fornecedor,
   });
 
   @override
-  _EditProductFormState createState() => _EditProductFormState();
+  State<EditProductForm> createState() => _EditProductFormState();
 }
 
 class _EditProductFormState extends State<EditProductForm> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   late TextEditingController _valueController;
-  late TextEditingController _supplierIdController;
+
+  final loading = ValueNotifier<bool>(false);
 
   @override
   void initState() {
@@ -70,8 +141,6 @@ class _EditProductFormState extends State<EditProductForm> {
     _descriptionController =
         TextEditingController(text: widget.initialProductDescription);
     _valueController = TextEditingController(text: widget.initialProductValue);
-    _supplierIdController =
-        TextEditingController(text: widget.initialSupplierId);
   }
 
   @override
@@ -79,7 +148,6 @@ class _EditProductFormState extends State<EditProductForm> {
     _nameController.dispose();
     _descriptionController.dispose();
     _valueController.dispose();
-    _supplierIdController.dispose();
     super.dispose();
   }
 
@@ -90,46 +158,50 @@ class _EditProductFormState extends State<EditProductForm> {
       children: [
         TextFormField(
           controller: _nameController,
-          decoration: InputDecoration(labelText: 'Nome do Produto'),
+          decoration: const InputDecoration(labelText: 'Nome do Produto'),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
         TextFormField(
           controller: _descriptionController,
-          decoration: InputDecoration(labelText: 'Descrição'),
+          decoration: const InputDecoration(labelText: 'Descrição'),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
         TextFormField(
           controller: _valueController,
-          keyboardType: TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(labelText: 'Valor (Ex: 25.50)'),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Valor (Ex: 25.50)'),
         ),
-        SizedBox(height: 12),
-        TextFormField(
-          controller: _supplierIdController,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: 'ID do Fornecedor'),
-        ),
-        SizedBox(height: 24),
+        const SizedBox(height: 24),
         ElevatedButton(
           onPressed: () {
-            // Adicione a lógica para atualizar o produto com os novos valores
-            final String productName = _nameController.text;
-            final String productDescription = _descriptionController.text;
-            final double productValue = double.parse(_valueController.text);
-            final int supplierId = int.parse(_supplierIdController.text);
+            loading.value = true;
+            Produto produto = Produto(
+              id: widget.productId,
+              nome: _nameController.text,
+              descricao: _descriptionController.text,
+              valor: _valueController.text,
+              disponivel: 'true',
+              fornecedorId: widget.fornecedor.id,
+            );
 
-            // Imprimir os valores para verificar se estão corretos
-            print('Nome: $productName');
-            print('Descrição: $productDescription');
-            print('Valor: $productValue');
-            print('ID do Fornecedor: $supplierId');
+            editProduct(context, produto, widget.fornecedor).then((value) => {
+                  loading.value = false,
+                });
           },
-          child: Text('Salvar Alterações'),
+          child: AnimatedBuilder(
+            animation: loading,
+            builder: (context, child) {
+              return loading.value
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(),
+                    )
+                  : const Text('Editar');
+            },
+          ),
         ),
       ],
     );
   }
 }
-
-
-

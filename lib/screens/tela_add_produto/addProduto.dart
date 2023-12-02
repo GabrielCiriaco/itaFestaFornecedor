@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:itafestafornecedor/screens/tela_inicial/home.dart';
+import 'package:itafestafornecedor/screens/tela_login/login.dart';
 
 class AddProductScreen extends StatelessWidget {
-  const AddProductScreen({super.key});
+  final Fornecedor fornecedor;
+
+  const AddProductScreen({super.key, required this.fornecedor});
 
   @override
   Widget build(BuildContext context) {
@@ -20,16 +23,17 @@ class AddProductScreen extends StatelessWidget {
             },
           ),
         ),
-        body: const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: AddProductForm(),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: AddProductForm(fornecedor: fornecedor),
         ),
       ),
     );
   }
 }
 
-Future<void> addProduct(BuildContext context, Produto produto) async {
+Future<void> addProduct(
+    BuildContext context, Produto produto, Fornecedor fornecedor) async {
   var response = await http.post(
     Uri.parse('https://redes-8ac53ee07f0c.herokuapp.com/api/v1/produtos'),
     headers: <String, String>{
@@ -57,7 +61,7 @@ Future<void> addProduct(BuildContext context, Produto produto) async {
               // volta para home
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const HomePage(),
+                  builder: (context) => HomePage(fornecedor: fornecedor),
                 ),
               );
             },
@@ -78,7 +82,9 @@ Future<void> addProduct(BuildContext context, Produto produto) async {
 }
 
 class AddProductForm extends StatefulWidget {
-  const AddProductForm({Key? key}) : super(key: key);
+  final Fornecedor fornecedor;
+
+  const AddProductForm({Key? key, required this.fornecedor}) : super(key: key);
 
   @override
   State<AddProductForm> createState() => _AddProductFormState();
@@ -121,10 +127,10 @@ class _AddProductFormState extends State<AddProductForm> {
               descricao: _descriptionController.text,
               valor: _valueController.text,
               disponivel: 'true',
-              fornecedorId: 1,
+              fornecedorId: widget.fornecedor.id,
             );
 
-            addProduct(context, produto).then((value) => {
+            addProduct(context, produto, widget.fornecedor).then((value) => {
                   loading.value = false,
                   _nameController.clear(),
                   _descriptionController.clear(),

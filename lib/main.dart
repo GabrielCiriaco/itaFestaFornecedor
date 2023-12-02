@@ -3,33 +3,34 @@ import 'package:flutter/material.dart';
 import './screens/tela_login/login.dart';
 
 void main() {
-  runApp(rootApp());
+  runApp(RootApp());
 }
 
-class rootApp extends StatefulWidget {
+class RootApp extends StatefulWidget {
+  const RootApp({super.key});
+
   @override
-  State<rootApp> createState() => _rootAppState();
+  State<RootApp> createState() => _RootAppState();
 }
 
-class _rootAppState extends State<rootApp> {
-  
+class _RootAppState extends State<RootApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        home: Login(),
-  
-          // floatingActionButton: FloatingActionButton(
-          //   onPressed: _incrementCounter,
-          //   tooltip: 'Increment',
-          //   child: const Icon(Icons.add),
+      home: Login(),
 
-        routes: {
-          // '/extrato':(_) => Extrato(),
-          // '/meu-fluxo':(_) => TiposMov(),
-          // '/metas':(_) => Metas(),
-          // '/creditos':(_) => Creditos(),
-          // '/newMov':(_)=> NewMov(),
-        },
-      );
-}
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: _incrementCounter,
+      //   tooltip: 'Increment',
+      //   child: const Icon(Icons.add),
+
+      routes: {
+        // '/extrato':(_) => Extrato(),
+        // '/meu-fluxo':(_) => TiposMov(),
+        // '/metas':(_) => Metas(),
+        // '/creditos':(_) => Creditos(),
+        // '/newMov':(_)=> NewMov(),
+      },
+    );
+  }
 }

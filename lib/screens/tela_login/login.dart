@@ -1,13 +1,68 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/container.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import '../tela_inicial/home.dart';
 
-class Login extends StatelessWidget {
+import 'package:http/http.dart' as http;
+
+class Fornecedor {
+  final int id;
+  final String nome;
+  final String email;
+  final String senha;
+  final String descricao;
+  final String endereco;
+  final String telefone;
+
+  Fornecedor(
+      {required this.id,
+      required this.nome,
+      required this.email,
+      required this.senha,
+      required this.descricao,
+      required this.endereco,
+      required this.telefone});
+
+  factory Fornecedor.fromJson(Map<String, dynamic> json) {
+    return Fornecedor(
+      id: json['id'],
+      nome: json['nome'],
+      email: json['email'],
+      senha: json['senha'],
+      descricao: json['descricao'],
+      endereco: json['endereco'],
+      telefone: json['telefone'],
+    );
+  }
+}
+
+Future<Fornecedor> fetchFornecedor() async {
+  final response = await http.get(Uri.parse(
+      'https://redes-8ac53ee07f0c.herokuapp.com/api/v1/fornecedores?email[eq]=zé@gmail.com'));
+
+  if (response.statusCode == 200) {
+    var json = jsonDecode(response.body) as Map<String, dynamic>;
+
+    var fornecedor = json['data'][0];
+
+    return Fornecedor.fromJson(fornecedor);
+  } else {
+    throw Exception('Falha ao carregar fornecedor');
+  }
+}
+
+class Login extends StatefulWidget {
+  const Login({super.key});
+
+  @override
+  State<Login> createState() => _LoginState();
+}
+
+class _LoginState extends State<Login> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  Login({super.key});
+  final loading = ValueNotifier<bool>(false);
 
   @override
   Widget build(BuildContext context) {
@@ -32,12 +87,10 @@ class Login extends StatelessWidget {
               TextFormField(
                 controller: usernameController,
                 decoration: const InputDecoration(
-                  labelText: 'Login',
+                  labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
-                // Salvar o valor do campo login
-                // Você pode usar um controller ou um onChanged para armazenar o valor
               ),
               const SizedBox(height: 10),
               TextFormField(
@@ -47,45 +100,60 @@ class Login extends StatelessWidget {
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true, // Para ocultar a senha
-                // Salvar o valor do campo senha
-                // Você pode usar um controller ou um onChanged para armazenar o valor
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  String username = 'gabriel';
-                  String password = '123';
+                  onPressed: () async {
+                    String enteredUsername = usernameController.text;
+                    String enteredPassword = passwordController.text;
 
-                  String enteredUsername = usernameController.text;
-                  String enteredPassword = passwordController.text;
+                    loading.value = true;
+                    var fornecedor = await fetchFornecedor();
+                    loading.value = false;
 
-                  if (enteredUsername == username &&
-                      enteredPassword == password) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HomePage()),
-                    );
-                  } else {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Erro de Login'),
-                        content: const Text(
-                            'Credenciais inválidas. Tente novamente.'),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                },
-                child: const Text('Entrar'),
-              ),
+                    if (enteredUsername == fornecedor.email &&
+                        enteredPassword == fornecedor.senha) {
+                      if (!mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                HomePage(fornecedor: fornecedor)),
+                      );
+                    } else {
+                      if (!mounted) return;
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Erro de Login'),
+                          content: const Text(
+                              'Credenciais inválidas. Tente novamente.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  },
+                  child: AnimatedBuilder(
+                    animation: loading,
+                    builder: (context, child) {
+                      if (loading.value) {
+                        return const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(),
+                        );
+                      } else {
+                        return const Text('Entrar');
+                      }
+                    },
+                  )),
             ],
           ),
         ),

@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/container.dart';
 import 'package:flutter/src/widgets/framework.dart';
+import 'package:itafestafornecedor/screens/tela_login/login.dart';
 import 'package:itafestafornecedor/screens/tela_pedidos/pedidos.dart';
 import '../tela_edit_produto/editProduto.dart';
 import '../tela_add_produto/addProduto.dart';
@@ -49,35 +50,6 @@ class Produto {
   }
 }
 
-class Fornecedor {
-  final int id;
-  final String tipo;
-  final String nome;
-  final String descricao;
-  final String endereco;
-  final String telefone;
-
-  Fornecedor({
-    required this.id,
-    required this.tipo,
-    required this.nome,
-    required this.descricao,
-    required this.endereco,
-    required this.telefone,
-  });
-
-  factory Fornecedor.fromJson(Map<String, dynamic> json) {
-    return Fornecedor(
-      id: json['id'],
-      tipo: json['tipo'],
-      nome: json['nome'],
-      descricao: json['descricao'],
-      endereco: json['endereco'],
-      telefone: json['telefone'],
-    );
-  }
-}
-
 Future<List<Produto>> fetchProdutos() async {
   final response = await http.get(Uri.parse(
       'https://redes-8ac53ee07f0c.herokuapp.com/api/v1/produtos?fornecedor_id[eq]=1'));
@@ -118,8 +90,23 @@ Future<List<Fornecedor>> fetchDadosFornecedor() async {
   }
 }
 
+Future<void> removeProduct(int id) async {
+  final response = await http.delete(
+    Uri.parse('https://redes-8ac53ee07f0c.herokuapp.com/api/v1/produtos/$id'),
+    headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception('Falha ao remover produto');
+  }
+}
+
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  final Fornecedor fornecedor;
+
+  const HomePage({Key? key, required this.fornecedor}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -127,13 +114,17 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late Future<List<Produto>> futureProdutos;
-  late Future<List<Fornecedor>> futureDadosFornecedor;
 
   @override
   void initState() {
     super.initState();
     futureProdutos = fetchProdutos();
-    futureDadosFornecedor = fetchDadosFornecedor();
+  }
+
+  void refreshProducts() {
+    setState(() {
+      futureProdutos = fetchProdutos();
+    });
   }
 
   @override
@@ -148,7 +139,9 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => AddProductScreen()),
+                MaterialPageRoute(
+                    builder: (context) =>
+                        AddProductScreen(fornecedor: widget.fornecedor)),
               );
             },
           ),
@@ -158,59 +151,43 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16.0),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          FutureBuilder(
-              future: futureDadosFornecedor,
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  var fornecedor = snapshot.data as List<Fornecedor>;
-                  return Row(
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: CircleAvatar(
-                          backgroundColor: Colors.blue,
-                          radius: 30,
-                          // Substitua o ícone com o ícone desejado para a loja
-                          child:
-                              Icon(Icons.store, size: 30, color: Colors.white),
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            fornecedor[0].nome,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-                          Text(
-                            fornecedor[0].descricao,
-                          ),
-                          Text(
-                            fornecedor[0].endereco,
-                            style: const TextStyle(
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                          Text(
-                            fornecedor[0].telefone,
-                          ),
-                        ],
-                      ),
-                    ],
-                  );
-                } else if (snapshot.hasError) {
-                  return Text('${snapshot.error}');
-                }
-
-                return const SizedBox(
-                  height: 85.0,
-                  width: 200.0,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }),
+          Row(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircleAvatar(
+                  backgroundColor: Colors.blue,
+                  radius: 30,
+                  // Substitua o ícone com o ícone desejado para a loja
+                  child: Icon(Icons.store, size: 30, color: Colors.white),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.fornecedor.nome,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Text(
+                    widget.fornecedor.descricao,
+                  ),
+                  Text(
+                    widget.fornecedor.endereco,
+                    style: const TextStyle(
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  Text(
+                    widget.fornecedor.telefone,
+                  ),
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -242,6 +219,17 @@ class _HomePageState extends State<HomePage> {
             child: FutureBuilder(
                 future: futureProdutos,
                 builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox(
+                        height: 20.0,
+                        width: 20.0,
+                        child: Center(child: CircularProgressIndicator()));
+                  }
+
+                  if (snapshot.hasError) {
+                    return Text('${snapshot.error}');
+                  }
+
                   if (snapshot.hasData) {
                     var produtos = snapshot.data as List<Produto>;
                     return ListView.builder(
@@ -250,18 +238,18 @@ class _HomePageState extends State<HomePage> {
                       itemCount: produtos.length,
                       itemBuilder: (context, index) {
                         return CardWithProduct(
+                          id: produtos[index].id,
                           productName: produtos[index].nome,
                           productDescription: produtos[index].descricao,
                           productPrice: produtos[index].valor,
+                          refreshCallback: refreshProducts,
+                          fornecedor: widget.fornecedor,
                         );
                       },
                     );
-                  } else if (snapshot.hasError) {
-                    return Text('${snapshot.error}');
                   }
 
-                  return const SizedBox(
-                      height: 85.0, width: 200.0, child: null);
+                  return const SizedBox(height: 20.0, width: 20.0, child: null);
                 }),
           ),
           const SizedBox(height: 20),
@@ -281,14 +269,21 @@ class _HomePageState extends State<HomePage> {
 }
 
 class CardWithProduct extends StatelessWidget {
+  final int id;
   final String productName;
   final String productDescription;
   final String productPrice;
+  final VoidCallback? refreshCallback;
+  final Fornecedor fornecedor;
 
   const CardWithProduct({
+    super.key,
+    required this.id,
     required this.productName,
     required this.productDescription,
     required this.productPrice,
+    this.refreshCallback,
+    required this.fornecedor,
   });
 
   @override
@@ -336,7 +331,35 @@ class CardWithProduct extends StatelessWidget {
             ),
             GestureDetector(
               onTap: () {
-                print("Excluir");
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text('Remover produto'),
+                      content: const Text(
+                          'Tem certeza que deseja remover este produto?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('Cancelar'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            await removeProduct(id);
+                            if (refreshCallback != null) {
+                              refreshCallback!();
+                            }
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('Remover'),
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
               child: const Icon(Icons.delete, color: Colors.red),
             ),
@@ -346,10 +369,11 @@ class CardWithProduct extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (context) => EditProductScreen(
-                            productDescription: this.productName,
-                            productName: this.productDescription,
-                            productValue: 25,
-                            supplierId: 1,
+                            productDescription: this.productDescription,
+                            productName: this.productName,
+                            productValue: double.parse(this.productPrice),
+                            id: this.id,
+                            fornecedor: this.fornecedor,
                           )),
                 );
               },
