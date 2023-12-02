@@ -36,9 +36,9 @@ class Fornecedor {
   }
 }
 
-Future<Fornecedor> fetchFornecedor() async {
+Future<Fornecedor> attemptLogin(String email) async {
   final response = await http.get(Uri.parse(
-      'https://redes-8ac53ee07f0c.herokuapp.com/api/v1/fornecedores?email[eq]=zé@gmail.com'));
+      'https://redes-8ac53ee07f0c.herokuapp.com/api/v1/fornecedores?email[eq]=$email'));
 
   if (response.statusCode == 200) {
     var json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -59,7 +59,7 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   final loading = ValueNotifier<bool>(false);
@@ -85,7 +85,7 @@ class _LoginState extends State<Login> {
               ),
               const SizedBox(height: 20),
               TextFormField(
-                controller: usernameController,
+                controller: emailController,
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
@@ -104,14 +104,14 @@ class _LoginState extends State<Login> {
               const SizedBox(height: 20),
               ElevatedButton(
                   onPressed: () async {
-                    String enteredUsername = usernameController.text;
+                    String enteredEmail = emailController.text;
                     String enteredPassword = passwordController.text;
 
                     loading.value = true;
-                    var fornecedor = await fetchFornecedor();
+                    var fornecedor = await attemptLogin(enteredEmail);
                     loading.value = false;
 
-                    if (enteredUsername == fornecedor.email &&
+                    if (enteredEmail == fornecedor.email &&
                         enteredPassword == fornecedor.senha) {
                       if (!mounted) return;
                       Navigator.push(
