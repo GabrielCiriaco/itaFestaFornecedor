@@ -37,17 +37,35 @@ class Fornecedor {
 }
 
 Future<Fornecedor> attemptLogin(String email) async {
-  final response = await http.get(Uri.parse(
-      'https://redes-8ac53ee07f0c.herokuapp.com/api/v1/fornecedores?email[eq]=$email'));
+  try {
+    final response = await http.get(Uri.parse(
+        'https://redes-8ac53ee07f0c.herokuapp.com/api/v1/fornecedores?email[eq]=$email'));
 
-  if (response.statusCode == 200) {
-    var json = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200) {
+      var json = jsonDecode(response.body) as Map<String, dynamic>;
 
-    var fornecedor = json['data'][0];
+      var fornecedor = json['data'][0];
 
-    return Fornecedor.fromJson(fornecedor);
-  } else {
-    throw Exception('Falha ao carregar fornecedor');
+      return Fornecedor.fromJson(fornecedor);
+    }
+
+    return Fornecedor(
+        id: 0,
+        nome: '',
+        email: '',
+        senha: '',
+        descricao: '',
+        endereco: '',
+        telefone: '');
+  } catch (err) {
+    return Fornecedor(
+        id: -1,
+        nome: '',
+        email: '',
+        senha: '',
+        descricao: '',
+        endereco: '',
+        telefone: '');
   }
 }
 
@@ -126,8 +144,9 @@ class _LoginState extends State<Login> {
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Erro de Login'),
-                          content: const Text(
-                              'Credenciais inválidas. Tente novamente.'),
+                          content: fornecedor.id == -1
+                              ? Text('Erro de rede')
+                              : Text('Credenciais inválidas. Tente novamente.'),
                           actions: [
                             TextButton(
                               onPressed: () {

@@ -215,7 +215,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: MediaQuery.of(context).size.height - 370,
+            height: MediaQuery.of(context).size.height - 280,
             child: FutureBuilder(
                 future: futureProdutos,
                 builder: (context, snapshot) {
@@ -232,35 +232,48 @@ class _HomePageState extends State<HomePage> {
 
                   if (snapshot.hasData) {
                     var produtos = snapshot.data as List<Produto>;
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: produtos.length,
-                      itemBuilder: (context, index) {
-                        return CardWithProduct(
-                          id: produtos[index].id,
-                          productName: produtos[index].nome,
-                          productDescription: produtos[index].descricao,
-                          productPrice: produtos[index].valor,
-                          refreshCallback: refreshProducts,
-                          fornecedor: widget.fornecedor,
-                        );
-                      },
+                    return Column(
+                      children: [
+                        Expanded(
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: produtos.length,
+                            itemBuilder: (context, index) {
+                              return CardWithProduct(
+                                id: produtos[index].id,
+                                productName: produtos[index].nome,
+                                productDescription: produtos[index].descricao,
+                                productPrice: produtos[index].valor,
+                                refreshCallback: refreshProducts,
+                                fornecedor: widget.fornecedor,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              minimumSize:
+                                  Size(MediaQuery.of(context).size.width, 40)),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => OrderScreen(
+                                        fornecedor: widget.fornecedor,
+                                        produtos: produtos,
+                                      )),
+                            );
+                          },
+                          child: const Text('Ver pedidos'),
+                        ),
+                      ],
                     );
                   }
 
                   return const SizedBox(height: 20.0, width: 20.0, child: null);
                 }),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => OrderScreen()),
-              );
-            },
-            child: const Text('Ver pedidos'),
           ),
         ]),
       ),
