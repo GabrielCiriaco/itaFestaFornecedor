@@ -184,7 +184,7 @@ class OrderCard extends StatefulWidget {
 }
 
 class _OrderCardState extends State<OrderCard> {
-  bool isConfirmed = false;
+  bool isConfirmed = true;
 
   void toggleConfirmation() {
     setState(() {
